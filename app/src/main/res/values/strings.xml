@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">gps_parking</string>
     <string name="provider_gps">GPS</string>
-    <string name="provider_network">Network</string>
-    <string name="location_settings">Location settings</string>
+    <string name="provider_network">Интернет</string>
+    <string name="location_settings">Настройки</string>
+    <string name="point2">Метка №2</string>
 </resources>

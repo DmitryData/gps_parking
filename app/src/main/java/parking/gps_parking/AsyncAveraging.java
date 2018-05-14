@@ -3,7 +3,6 @@ package parking.gps_parking;
 import android.os.AsyncTask;
 import android.widget.Toast;
 
-import static parking.gps_parking.MainActivity.array;
 import static parking.gps_parking.MainActivity.arraySumm;
 import static parking.gps_parking.MainActivity.averaging;
 import static parking.gps_parking.MainActivity.context;
@@ -16,56 +15,42 @@ import static parking.gps_parking.MainActivity.locationField;
 import static parking.gps_parking.MainActivity.tvBetweenPoint;
 import static parking.gps_parking.MainActivity.tvLocat2;
 
-public class AsyncAveraging extends AsyncTask< Void,Void,String> {
-
-
-
+public class AsyncAveraging extends AsyncTask<Void,Void,String> {
 
     @Override
     protected String doInBackground(Void... voids) {
 
         while (averaging) {
 
+            try {
+                Thread.sleep(500 * 10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             lat2 = (double) locationField.getLatitude();
             lng2 = (double) locationField.getLongitude();
 
             double distance = distFrom(lat1, lng1, lat2, lng2);
 
-            distance = distance * 100;
-
-            String formattedDouble = String.format("%.2f", distance);
-
-
-
+            distance = distance * 100;  // калибровка, цифра найдена опытным путем
             arraySumm = arraySumm + distance;
-
-            try {
-                Thread.sleep(300 * 10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
             counter++;
-
-
             this.publishProgress();
 
 
-
-            if (counter >= 3) {
+            if (counter >= 2) {
                 counter = 0;
                 averaging = false;
                 this.cancel(false);
-
                 break;
             }
-
 
         }
             return null;
         }
 
-
+        // расчет расстояния
         private double distFrom(double lat1, double lng1, double lat2, double lng2) {
         double earthRadius = 3958.75;
         double dLat = Math.toRadians(lat2-lat1);
@@ -77,16 +62,14 @@ public class AsyncAveraging extends AsyncTask< Void,Void,String> {
         return   earthRadius * c;
     }
 
-
-
         @Override
         protected void onProgressUpdate (Void...values){
             super.onProgressUpdate(values);
-            if (counter == 2) {
-                tvBetweenPoint.setText("Метры " + arraySumm / 3 + " ");
+            if (counter == 1) {
+                tvBetweenPoint.setText("Метры " + (float)arraySumm / 2 + " ");
                 tvLocat2.setText("");
             }
-            Toast toast = Toast.makeText(context, "lat2 " + lat2 + "lng2 " + lng2, Toast.LENGTH_SHORT);
+            Toast toast = Toast.makeText(context, "Широта = " + lat2 + " и Долгота = " + lng2, Toast.LENGTH_SHORT);
             toast.show();
         }
     }

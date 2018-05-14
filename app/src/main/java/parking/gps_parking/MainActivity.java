@@ -1,6 +1,9 @@
 package parking.gps_parking;
 
-import java.util.Date;
+/*  Программа собирает gps и net координаты,
+во время запуска приложения, и сравнивает их
+с другой координатой, которая получается
+после нажатия на кнопку */
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -16,102 +19,41 @@ import android.support.v4.app.ActivityCompat;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    TextView tvEnabledGPS;
-    TextView tvStatusGPS;
-    TextView tvLocationGPS;
-    TextView tvEnabledNet;
-    TextView tvStatusNet;
-    TextView tvLocationNet;
-
-    public static TextView tvLocat2;
-    public static TextView tvBetweenPoint;
-    Button coordinate2;
-
-    public static LocationManager locationManager;
-    StringBuilder sbGPS = new StringBuilder();
-    StringBuilder sbNet = new StringBuilder();
-
-    public static double lat1;
-    public static double lng1;
-    public static double lng2;
-    public static double lat2;
-    public static Location locationField;
-
-    public static Context context;
-
-    private boolean checked = false;
-
-    public int metters;
-    public static boolean averaging;
-    public static int counter;
-    public static double[] array;
-    public static double arraySumm;
-    private boolean cycle_flag;
     private AsyncAveraging asyncObj = new AsyncAveraging();
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    public static LocationManager locationManager; // объект который делает магию gps
 
-        tvEnabledGPS = (TextView) findViewById(R.id.tvEnabledGPS);
-        tvStatusGPS = (TextView) findViewById(R.id.tvStatusGPS);
-        tvLocationGPS = (TextView) findViewById(R.id.tvLocationGPS);
-        tvEnabledNet = (TextView) findViewById(R.id.tvEnabledNet);
-        tvStatusNet = (TextView) findViewById(R.id.tvStatusNet);
-        tvLocationNet = (TextView) findViewById(R.id.tvLocationNet);
+    private TextView tvLocationGPS; // координаты gps, для точки 1
+    private TextView tvLocationNet; // координаты net, для точки 1
+    private TextView tvStatusNet;   // код состояния net
+    private TextView tvStatusGPS;   // код состояния gps
+    private TextView tvEnabledGPS;  // включен ли gps
+    private TextView tvEnabledNet;  // включен ли net
 
-        tvLocat2 = (TextView) findViewById(R.id.tvLocat2);
-        tvBetweenPoint = (TextView) findViewById(R.id.tvBetweenPoint);
-        coordinate2 = (Button) findViewById(R.id.coordinate2);
+    public static boolean averaging;               // если averaging == true, то кнопка точки 2,
+                                                   // была нажата. Поэтому для того чтоб
+                                                   // запустился asincTask
+                                                   // надо чтоб checked == false
+    @SuppressLint("StaticFieldLeak")
+    public static Context context;
+    @SuppressLint("StaticFieldLeak")
+    public static TextView tvLocat2;               // static координаты, для точки 2
+    @SuppressLint("StaticFieldLeak")
+    public static TextView tvBetweenPoint;         // расстояние между двумя точками
+                                                   // находится на отличной от точки 1 месте)
+    public static Location locationField;
+    public static boolean checked = false;         // если false, то проверяет текущее местоположение
+                                                   // при запуске, если true, то уже проверил
+    public static double lat1;                     // широта точки 1
+    public static double lat2;                     // широта точки 2
+    public static double lng1;                     // долгота точки 1
+    public static double lng2;                     // долгота точки 2
 
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-
-        averaging = true;
-        cycle_flag = false;
-
-        context = getApplicationContext();
-
-    }
-
-
-
-
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-
-            return;
-
-        }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                300 * 10, 3, locationListener);
-        locationManager.requestLocationUpdates(
-                LocationManager.NETWORK_PROVIDER, 300 * 10, 3,
-                locationListener);
-        checkEnabled();             // обновляем информацию о включенности провайдеров
-        checked = false;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        locationManager.removeUpdates(locationListener);
-    }
-
+    public static int counter;                     // счетчик
+    public static double arraySumm;                // усредненная дистанция
 
     private LocationListener locationListener = new LocationListener() {
 
@@ -153,8 +95,9 @@ public class MainActivity extends Activity {
                 tvStatusNet.setText("Status: " + String.valueOf(status));
             }
         }
-    };
+    };  // обработка разных сценариев для gps
 
+    // задает координаты в поля текста
     private void showLocation(Location location) {
         if (location == null)
             return;
@@ -166,36 +109,73 @@ public class MainActivity extends Activity {
         }
     }
 
+    // возвращает в поле текста координаты
     @SuppressLint("DefaultLocale")
     private String formatLocation(Location location) {
         if (location == null)
             return "";
         locationField = location;
-        return lat1 + " //// " + lng1;
+        return lat1 + " / " +  lng1;
     }
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        context = getApplicationContext();
+
+        tvLocationGPS = (TextView) findViewById(R.id.tvLocationGPS);
+        tvLocationNet = (TextView) findViewById(R.id.tvLocationNet);
+        tvEnabledGPS = (TextView) findViewById(R.id.tvEnabledGPS);
+        tvEnabledNet = (TextView) findViewById(R.id.tvEnabledNet);
+        tvStatusGPS = (TextView) findViewById(R.id.tvStatusGPS);
+        tvStatusNet = (TextView) findViewById(R.id.tvStatusNet);
+        tvLocat2 = (TextView) findViewById(R.id.tvLocat2);
+        tvBetweenPoint = (TextView) findViewById(R.id.tvBetweenPoint);
+
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+        averaging = true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+            }
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,300, 1, locationListener);      // настройка сбора данных
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 300, 1, locationListener); // настройка сбора данных
+        checked = false;
+        checkEnabled();                            // обновляем информацию о включенности провайдеров
+    }
     @SuppressLint("SetTextI18n")
     private void checkEnabled() {
-        tvEnabledGPS.setText("Enabled: "
-                + locationManager
-                .isProviderEnabled(LocationManager.GPS_PROVIDER));
-        tvEnabledNet.setText("Enabled: "
-                + locationManager
-                .isProviderEnabled(LocationManager.NETWORK_PROVIDER));
+        tvEnabledGPS.setText("Состояние: " + locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER));
+        tvEnabledNet.setText("Состояние: " + locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER));
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        locationManager.removeUpdates(locationListener);
+    }
+
+    // запуск Activity настроек
     public void onClickLocationSettings(View view) {
-        startActivity(new Intent(
-                android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+        startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
     };
 
-    public void onClickGeo2(View view){
-        averaging();
-    }
-
-        public void averaging(){
-
-
+    // запуск AsyncTask c установкой точки 2
+    public void averaging(View view){
             if (averaging){
                 averaging = false;
             } else {
@@ -206,4 +186,5 @@ public class MainActivity extends Activity {
                 tvBetweenPoint.setText(" ");
             }
             }
-        }
+
+}
